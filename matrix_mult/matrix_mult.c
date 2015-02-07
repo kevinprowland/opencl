@@ -82,7 +82,7 @@ float* make_matrix(size_t nn) {
 }
 
 int main() {
-	/*OpenCL structures*/
+	/* OpenCL structures */
 	cl_device_id devices[2];
 	cl_context context;
 	cl_program program;
@@ -90,11 +90,11 @@ int main() {
 	cl_command_queue cpu_queue, gpu_queue;
 	cl_int err;
 
-	/*initialize data*/
+	/* initialize data */
 	float* a = make_matrix(MATRIX_SIZE);
 	float* b = make_matrix(MATRIX_SIZE);
 
-	/*create contexts and devices*/
+	/* create contexts and devices */
 	devices[0] = create_device(CL_DEVICE_TYPE_CPU);
 	devices[1] = create_device(CL_DEVICE_TYPE_GPU);
 
@@ -104,12 +104,67 @@ int main() {
 		printf("Couldn't create one or more contexts");
 	}
 
-	/*compile program*/
+	/* compile program */
 	program = build_program(context, PROGRAM_NAME);
 
-	
-	
+	/* create command queues */
+	cpu_queue = clCreateCommandQueue(context, devices[0], 0, &err);
+	if(err < 0) {
+		printf("Couldn't create command queue for cpu\n");
+	}
+
+	gpu_queue = clCreateCommandQueue(context, devices[1], 0, &err);
+	if(err < 0) {
+		printf("Couldn't create command queue for gpu\n");
+	}
+
+	/* create a kernel */
+   	kernel = clCreateKernel(program, KERNEL_FUNC, &err);
+   	if(err < 0) {
+      	perror("Couldn't create a kernel");
+      	exit(1);
+   	}
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

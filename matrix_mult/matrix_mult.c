@@ -89,6 +89,7 @@ int main() {
 	cl_kernel kernel;
 	cl_command_queue cpu_queue, gpu_queue;
 	cl_int err;
+	cl_mem a_buffer, b_buffer, c_buffer;
 	size_t global_size, local_size;
 
 	/* initialize data */
@@ -127,7 +128,17 @@ int main() {
    	}
 
    	/* create kernel arguments */
-   	err = clSetKernelArg(kernel, 0, sizeof(cl_mem), &input_buffer);
+   	a_buffer = clCreateBuffer(context, CL_MEM_READ_ONLY |
+        CL_MEM_COPY_HOST_PTR, MATRIX_SIZE * sizeof(float), a, &err);
+   	b_buffer = clCreateBuffer(context, CL_MEM_READ_ONLY |
+   		CL_MEM_COPY_HOST_PTR, MATRIX_SIZE * sizeof(float), b, &err);
+   	c_buffer = clCreateBuffer(context, CL_MEM_READ_WRITE |
+        CL_MEM_COPY_HOST_PTR, MATRIX_SIZE * sizeof(float), c, &err);
+
+   	err  = clSetKernelArg(kernel, 0, sizeof(cl_mem), &a_buffer);
+   	err |= clSetKernelArg(kernel, 1, sizeof(cl_mem), &b_buffer);
+   	err |= clSetKernelArg(kernel, 2, MATRIX_SIZE * sizeof(float), NULL);
+   	err |= clSetKernelArg(kernel, 3, sizeof(cl_mem), &c_buffer);
    	if(err < 0) {
       	perror("Couldn't create a kernel argument");
       	exit(1);

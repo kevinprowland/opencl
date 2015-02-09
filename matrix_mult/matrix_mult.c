@@ -24,10 +24,10 @@
 #include <CL/cl.h>
 #endif
 
-cl_program build_program(cl_context context, const char* filename) {
+cl_program build_program(cl_context context, cl_device_id device, const char* filename) {
 	FILE* program_file;
-	char* program_buffer;
-	size_t program_size;
+	char* program_buffer, *program_log;
+	size_t program_size, log_size;
 	int err;
 
 	program_file = fopen(filename, "r");
@@ -35,7 +35,7 @@ cl_program build_program(cl_context context, const char* filename) {
 		printf("Couldn't find the program file\n");
 		exit(1);
 	}
-	fseek(filename, 0, SEEK_END);
+	fseek(program_file, 0, SEEK_END);
 	program_size = ftell(program_file);
 	rewind(program_file);
 
@@ -52,6 +52,19 @@ cl_program build_program(cl_context context, const char* filename) {
 	}
 
 	err = clBuildProgram(program, 0, NULL, NULL, NULL, NULL);
+		if(err < 0) {
+
+      	/* Find size of log and print to std output */
+      	clGetProgramBuildInfo(program, device, CL_PROGRAM_BUILD_LOG, 
+            0, NULL, &log_size);
+      	program_log = (char*) malloc(log_size + 1);
+      	program_log[log_size] = '\0';
+      	clGetProgramBuildInfo(program, device, CL_PROGRAM_BUILD_LOG, 
+            log_size + 1, program_log, NULL);
+      	printf("%s\n", program_log);
+      	free(program_log);
+      	exit(1);
+   }
 	return program;
 }
 
@@ -95,6 +108,10 @@ int main() {
 	/* initialize data */
 	float* a = make_matrix(MATRIX_SIZE);
 	float* b = make_matrix(MATRIX_SIZE);
+	float* c = (float*)malloc(MATRIX_SIZE * sizeof(float));
+
+	/* and result buffer */
+	float* result = (float*)malloc(MATRIX_SIZE * sizeof(float));
 
 	/* create contexts and devices */
 	devices[0] = create_device(CL_DEVICE_TYPE_CPU);
@@ -107,7 +124,7 @@ int main() {
 	}
 
 	/* compile program */
-	program = build_program(context, PROGRAM_NAME);
+	program = build_program(context, devices[0], PROGRAM_NAME);
 
 	/* create command queues */
 	cpu_queue = clCreateCommandQueue(context, devices[0], 0, &err);
@@ -124,6 +141,7 @@ int main() {
    	kernel = clCreateKernel(program, KERNEL_FUNC, &err);
    	if(err < 0) {
       	perror("Couldn't create a kernel");
+      	printf("%d\n", err);
       	exit(1);
    	}
 
@@ -135,9 +153,11 @@ int main() {
    	c_buffer = clCreateBuffer(context, CL_MEM_READ_WRITE |
         CL_MEM_COPY_HOST_PTR, MATRIX_SIZE * sizeof(float), c, &err);
 
+   	int i = MATRIX_SIZE;
+   	int* p = &i;
    	err  = clSetKernelArg(kernel, 0, sizeof(cl_mem), &a_buffer);
    	err |= clSetKernelArg(kernel, 1, sizeof(cl_mem), &b_buffer);
-   	err |= clSetKernelArg(kernel, 2, MATRIX_SIZE * sizeof(float), NULL);
+   	err |= clSetKernelArg(kernel, 2, sizeof(int), &p);
    	err |= clSetKernelArg(kernel, 3, sizeof(cl_mem), &c_buffer);
    	if(err < 0) {
       	perror("Couldn't create a kernel argument");
@@ -155,7 +175,7 @@ int main() {
    	*/
    	global_size = MATRIX_SIZE * MATRIX_SIZE;
    	local_size = MATRIX_SIZE;
-   	err = clEnqueueNDRangeKernel(queue, kernel, 2, NULL, &global_size, 
+   	err = clEnqueueNDRangeKernel(cpu_queue, kernel, 2, NULL, &global_size, 
         &local_size, 0, NULL, NULL); 
    	if(err < 0) {
       	perror("Couldn't enqueue the kernel");
@@ -163,8 +183,8 @@ int main() {
    	}
 
    	/* Read the kernel's output */
-   	err = clEnqueueReadBuffer(queue, sum_buffer, CL_TRUE, 0, 
-        sizeof(sum), sum, 0, NULL, NULL);
+   	err = clEnqueueReadBuffer(cpu_queue, c_buffer, CL_TRUE, 0, 
+        MATRIX_SIZE*sizeof(float), result, 0, NULL, NULL);
    	if(err < 0) {
       	perror("Couldn't read the buffer");
       	exit(1);

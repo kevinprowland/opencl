@@ -1,16 +1,18 @@
-__kernel void matrix_mult(__global float* a
-			   			  __global float* b
-			   			  __global int size
+__kernel void matrix_mult(__global float* a,
+			   			  __global float* b,
+			   			  __constant int* size,
 			   			  __global float* c) {
 	int gid = get_global_id(0);
 	int lid = get_local_id(0);
 	float local_result;
 
-	local_result += a[gid*size + lid]*b[lid*size + gid];
+	local_result += a[gid*(*size) + lid]*b[lid*(*size) + gid];
 	printf("global id: %d\t local_id: %d\n", gid, lid);
+	
+	barrier(CLK_LOCAL_MEM_FENCE);
 	c[gid] = local_result;
 
-	barrier(CLK_LOCAL_MEM_FENCE);
+	barrier(CLK_GLOBAL_MEM_FENCE);
 	//find determinant?
 }
 

@@ -10,7 +10,7 @@
 
 #define PROGRAM_NAME "matrix_mult.cl"
 #define KERNEL_FUNC "matrix_mult"
-#define MATRIX_SIZE 64
+#define MATRIX_SIZE 3
 
 #include <math.h>
 #include <stdio.h>
@@ -89,6 +89,7 @@ int main() {
 	cl_kernel kernel;
 	cl_command_queue cpu_queue, gpu_queue;
 	cl_int err;
+	size_t global_size, local_size;
 
 	/* initialize data */
 	float* a = make_matrix(MATRIX_SIZE);
@@ -124,53 +125,37 @@ int main() {
       	perror("Couldn't create a kernel");
       	exit(1);
    	}
+
+   	/* create kernel arguments */
+   	err = clSetKernelArg(kernel, 0, sizeof(cl_mem), &input_buffer);
+   	if(err < 0) {
+      	perror("Couldn't create a kernel argument");
+      	exit(1);
+   	}
+
+   	/* 
+	enqueue kernel
+
+   	global size should be MATRIX_SIZE x MATRIX_SIZE
+   		because that is the size of the output
+   	
+   	local size should be MATRIX_SIZE because that is
+   		the number of operations per element of the output 
+   	*/
+   	global_size = MATRIX_SIZE * MATRIX_SIZE;
+   	local_size = MATRIX_SIZE;
+   	err = clEnqueueNDRangeKernel(queue, kernel, 2, NULL, &global_size, 
+        &local_size, 0, NULL, NULL); 
+   	if(err < 0) {
+      	perror("Couldn't enqueue the kernel");
+      	exit(1);
+   	}
+
+   	/* Read the kernel's output */
+   	err = clEnqueueReadBuffer(queue, sum_buffer, CL_TRUE, 0, 
+        sizeof(sum), sum, 0, NULL, NULL);
+   	if(err < 0) {
+      	perror("Couldn't read the buffer");
+      	exit(1);
+   	}
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

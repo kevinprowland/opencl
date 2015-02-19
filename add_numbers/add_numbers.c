@@ -58,7 +58,11 @@ cl_device_id create_device() {
    }
    //------------- @author Kevin Rowland - Jan 29, 2014 ----------------------- 
 
-
+   unsigned long max_work_item_sizes[2];
+   clGetDeviceInfo(dev, CL_DEVICE_MAX_WORK_ITEM_SIZES, sizeof(size_t), 
+         &max_work_item_sizes, NULL);
+   printf("Max work item size: %lu / %lu\n", 
+      max_work_item_sizes[0], max_work_item_sizes[1]);
    clGetDeviceInfo(dev, CL_DEVICE_NAME, sizeof(int), NULL, &param_value_size);
    char *device_name = (char *)malloc(param_value_size + 1);
    device_name[param_value_size] = '\0';
@@ -192,8 +196,8 @@ int main() {
    }
 
    /* Enqueue kernel */
-   err = clEnqueueNDRangeKernel(queue, kernel, 1, NULL, &global_size, 
-         &local_size, 0, NULL, NULL); 
+   err = clEnqueueNDRangeKernel(queue, kernel, 2, NULL, &global_size, 
+         NULL, 0, NULL, NULL); 
    if(err < 0) {
       perror("Couldn't enqueue the kernel");
       exit(1);

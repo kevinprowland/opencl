@@ -1,3 +1,7 @@
+/*
+
+*/
+
 __kernel void matrix_mult(__global float* a,
 			   			  __global float* b,
 			   			  __local  float* local_result,
@@ -16,29 +20,7 @@ __kernel void matrix_mult(__global float* a,
 	int matrix_dimen = get_num_groups(0); //TODO use matrix_dimen_1
 	int matrix_dimen_1 = get_num_groups(1);
 
-	if((get_global_id(0) == 0) && (get_global_id(1) == 0)) {
-		printf("Printing kernel representation of a:\n");
-		for(int i = 0; i < matrix_dimen; i++) {
-   			for(int j = 0; j < matrix_dimen; j++)
-   				printf("%f   ", a[i*matrix_dimen+j]);
-   			printf("\n");
-   		}
-   		printf("\n");
-	}
-	if((get_global_id(0) == 0) && (get_global_id(1) == 0)) {
-		printf("Printing kernel representation of b:\n");
-		for(int i = 0; i < matrix_dimen; i++) {
-   			for(int j = 0; j < matrix_dimen; j++)
-   				printf("%f   ", a[i*matrix_dimen+j]);
-   			printf("\n");
-   		}
-   		printf("\n");
-	}
-
-
 	local_result_vector[lid] = a[gid_0*matrix_dimen + lid]*b[lid*matrix_dimen + gid_1];
-	//printf("num groups: %d\n", matrix_dimen);
-	//printf("group id: (%d,%d)\t local_id: %d\n", gid_0, gid_1, lid);
 	
 	barrier(CLK_LOCAL_MEM_FENCE);
 	
@@ -51,17 +33,6 @@ __kernel void matrix_mult(__global float* a,
 	c[gid_1*matrix_dimen+gid_0] = (*local_result);
 
 	barrier(CLK_GLOBAL_MEM_FENCE);
-	if((get_global_id(0) == 0) && (get_global_id(1) == 0)) {
-		printf("Printing kernel representation of c:\n");
-		for(int i = 0; i < matrix_dimen; i++) {
-   			for(int j = 0; j < matrix_dimen; j++)
-   				printf("%f   ", c[i*matrix_dimen+j]);
-   			printf("\n");
-   		}
-   		printf("\n");
-	}
-
-	
 }
 
 /*

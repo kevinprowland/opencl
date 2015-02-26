@@ -10,13 +10,14 @@
 
 #define PROGRAM_NAME "matrix_mult.cl"
 #define KERNEL_FUNC "matrix_mult"
-#define MATRIX_SIZE 3ul
+//#define MATRIX_SIZE 3ul
 
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <sys/time.h>
 
 #ifdef MAC
 #include <OpenCL/cl.h>
@@ -95,7 +96,7 @@ cl_device_id create_device(cl_device_type type) {
 
 void make_matrix(float* ra, size_t n) {
 	for(int i = 0; i < n*n; i++) {
-		ra[i] = 1.0f; //rand() / (float)RAND_MAX;
+		ra[i] = i * 1.0f; //rand() / (float)RAND_MAX;
 	}
 }
 
@@ -125,7 +126,7 @@ void get_info(cl_device_id dev) {
    	char *device_vendor = (char *)malloc(param_value_size + 1);
    	device_vendor[param_value_size] = '\0';
    	clGetDeviceInfo(dev, CL_DEVICE_VENDOR, param_value_size, device_vendor, NULL);
-   	printf("Device vendor: %s\n", device_vendor);
+   	printf("Device vendor: %s\n\n", device_vendor);
 
    	unsigned long max_work_item_sizes[3];
 	clGetDeviceInfo(dev, CL_DEVICE_MAX_WORK_ITEM_SIZES, sizeof(max_work_item_sizes), 
@@ -133,9 +134,25 @@ void get_info(cl_device_id dev) {
 	printf("Max work item size: %lu / %lu / %lu\n", 
 		max_work_item_sizes[0], max_work_item_sizes[1], max_work_item_sizes[2]);
 	printf("\n");
+
+	unsigned long max_mem_alloc_size;
+	clGetDeviceInfo(dev, CL_DEVICE_MAX_MEM_ALLOC_SIZE, sizeof(max_mem_alloc_size), 
+   		&max_mem_alloc_size, NULL);
+	printf("Max mem alloc size: %lu \n", max_mem_alloc_size);
+	printf("\n");
 }
 
-int main() {
+int main(int argc, char** argv) {
+	unsigned long MATRIX_SIZE = 3; //default
+	if(argc > 2) {
+		printf("Usage: ./matrix_mult size_of_square_matrix\n");
+		exit(1);
+	} else if(argc == 2) {
+		MATRIX_SIZE = strtoul(argv[1], NULL, 0);
+	}
+
+	printf("MATRIX_SIZE: %lu\n", MATRIX_SIZE);
+
 	/* OpenCL structures */
 	cl_device_id devices[2];
 	cl_context context;
@@ -150,7 +167,8 @@ int main() {
 	make_matrix(a, MATRIX_SIZE);
 	float b[MATRIX_SIZE];
 	make_matrix(b, MATRIX_SIZE);
-	float c[MATRIX_SIZE*MATRIX_SIZE] = {0};
+	float c[MATRIX_SIZE*MATRIX_SIZE];
+	memset(c, 0, MATRIX_SIZE);
 
 	/* and result buffer */
 	float* result = (float*)malloc(MATRIX_SIZE*MATRIX_SIZE*sizeof(float));
@@ -169,6 +187,17 @@ int main() {
 
 	/* compile program */
 	program = build_program(context, devices[1], PROGRAM_NAME);
+
+	size_t build_size;
+	char* program_log;
+	clGetProgramBuildInfo(program, devices[1], CL_PROGRAM_BUILD_LOG, 
+            0, NULL, &build_size);
+    program_log = (char*) malloc(build_size + 1);
+    program_log[build_size] = '\0';
+    clGetProgramBuildInfo(program, devices[1], CL_PROGRAM_BUILD_LOG, 
+        build_size + 1, program_log, NULL);
+    printf("%s\n", program_log);
+    free(program_log);
 
 	/* create command queues */
 	cpu_queue = clCreateCommandQueue(context, devices[0], 0, &err);
@@ -189,32 +218,30 @@ int main() {
    	}
 
    	/* create kernel arguments */
+
+   	printf("Actual mem alloc size: %lu\n", MATRIX_SIZE*MATRIX_SIZE*sizeof(float));
+
    	a_buffer = clCreateBuffer(context, CL_MEM_READ_ONLY |
-        CL_MEM_COPY_HOST_PTR, MATRIX_SIZE * sizeof(float), a, &err);
+        CL_MEM_COPY_HOST_PTR, MATRIX_SIZE * MATRIX_SIZE * sizeof(float), a, &err);
    	if(err < 0) {
     	perror("Couldn't create a buffer");
       	exit(1);   
    	}
 
    	b_buffer = clCreateBuffer(context, CL_MEM_READ_ONLY |
-   		CL_MEM_COPY_HOST_PTR, MATRIX_SIZE * sizeof(float), b, &err);
+   		CL_MEM_COPY_HOST_PTR, MATRIX_SIZE * MATRIX_SIZE * sizeof(float), b, &err);
    	if(err < 0) {
     	perror("Couldn't create b buffer");
       	exit(1);   
    	}
 
    	c_buffer = clCreateBuffer(context, CL_MEM_READ_WRITE |
-        CL_MEM_COPY_HOST_PTR, MATRIX_SIZE * sizeof(float), c, &err);
+        CL_MEM_COPY_HOST_PTR, MATRIX_SIZE * MATRIX_SIZE * sizeof(float), c, &err);
    	if(err < 0) {
     	perror("Couldn't create c buffer");
       	exit(1);   
    	}
    	
-   	for(int i = 0; i < MATRIX_SIZE; i++) {
-   		for(int j = 0; j < MATRIX_SIZE; j++)
-   			printf("%f   ", a[i*MATRIX_SIZE+j]);
-   		printf("\n");
-   	}
    	printf("\n");
    	err  = clSetKernelArg(kernel, 0, sizeof(cl_mem), &a_buffer);
    	err |= clSetKernelArg(kernel, 1, sizeof(cl_mem), &b_buffer);
@@ -237,6 +264,9 @@ int main() {
    	*/
    	size_t global_size[2] = {MATRIX_SIZE*MATRIX_SIZE, MATRIX_SIZE};
    	size_t local_size[2] = {MATRIX_SIZE, 1};
+   	struct timeval start, end;
+
+   	gettimeofday(&start, 0);
    	err = clEnqueueNDRangeKernel(gpu_queue, kernel, 2, NULL, global_size, 
         local_size, 0, NULL, NULL);
 
@@ -248,12 +278,15 @@ int main() {
 
    	/* Read the kernel's output */
    	err = clEnqueueReadBuffer(gpu_queue, c_buffer, CL_TRUE, 0, 
-        MATRIX_SIZE*sizeof(float), result, 0, NULL, NULL);
+        MATRIX_SIZE * MATRIX_SIZE*sizeof(float), result, 0, NULL, NULL);
    	if(err < 0) {
       	perror("Couldn't read the buffer");
       	exit(1);
    	}
+   	gettimeofday(&end, 0);
 
+   	printf("Time to execute: %f\n", (end.tv_sec + end.tv_usec/1000000.0) - 
+   		(start.tv_sec + start.tv_usec/1000000.0));
 	printf("Printing host representation of a:\n");
    	for(int i = 0; i < MATRIX_SIZE; i++) {
    		for(int j = 0; j < MATRIX_SIZE; j++)

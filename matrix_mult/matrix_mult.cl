@@ -30,7 +30,7 @@ __kernel void matrix_mult(__global float* a,
 			(*local_result) += local_result_vector[i];
 		}
 	}
-	c[gid_1*matrix_dimen+gid_0] = (*local_result);
+	c[gid_0*matrix_dimen+gid_1] = (*local_result);
 
 	barrier(CLK_GLOBAL_MEM_FENCE);
 }

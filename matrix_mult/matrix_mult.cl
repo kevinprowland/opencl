@@ -1,4 +1,18 @@
 /*
+	matrix_mult.cl
+	@author Kevin Rowland
+	Feb 25, 2015
+
+	| Matrix multiplication on an n x n square matrix |
+
+	+ The output matrix size (n^2) is chosen as the workgroup size
+	   - Each workgroup therefore computes one element of the output array
+	+ Each workgroup contains n work items
+	   - Each workitem therefore computes one elementwise multiplication
+	+ The local barrier allows us to wait for each elementwise multiplication to 
+	finish before adding them together to compute the output element
+	+ The global barrier allows us to wait until each output element is computed
+	before filling up the output array
 
 */
 
@@ -7,6 +21,11 @@ __kernel void matrix_mult(__global float* a,
 			   			  __local  float* local_result,
 			   			  __local  float* local_result_vector,
 			   			  __global float* c) {
+
+	int matrix_dimen = get_num_groups(0);
+	int matrix_dimen_1 = get_num_groups(1);
+
+
 
 	int gid_0 = get_group_id(0);
 	int gid_1 = get_group_id(1);
@@ -17,8 +36,9 @@ __kernel void matrix_mult(__global float* a,
 	//global_id(0) is just gid(0)*lid 
 	//global_id(1) likewise
 
-	int matrix_dimen = get_num_groups(0); //TODO use matrix_dimen_1
-	int matrix_dimen_1 = get_num_groups(1);
+	if(matrix_dimen_1 == 1) { //cpu
+		local_result_vector[lid] = a[gid_0]; //TODO 1D range kernel math
+	}
 
 	local_result_vector[lid] = a[gid_0*matrix_dimen + lid]*b[lid*matrix_dimen + gid_1];
 	

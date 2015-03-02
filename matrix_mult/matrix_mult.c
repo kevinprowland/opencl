@@ -133,13 +133,11 @@ void get_info(cl_device_id dev) {
    		&max_work_item_sizes, NULL);
 	printf("Max work item size: %lu / %lu / %lu\n", 
 		max_work_item_sizes[0], max_work_item_sizes[1], max_work_item_sizes[2]);
-	printf("\n");
 
 	unsigned long max_mem_alloc_size;
 	clGetDeviceInfo(dev, CL_DEVICE_MAX_MEM_ALLOC_SIZE, sizeof(max_mem_alloc_size), 
    		&max_mem_alloc_size, NULL);
 	printf("Max mem alloc size: %lu \n", max_mem_alloc_size);
-	printf("\n");
 }
 
 int main(int argc, char** argv) {
@@ -196,7 +194,7 @@ int main(int argc, char** argv) {
     program_log[build_size] = '\0';
     clGetProgramBuildInfo(program, devices[1], CL_PROGRAM_BUILD_LOG, 
         build_size + 1, program_log, NULL);
-    printf("%s\n", program_log);
+    printf("Program log: %s\n", program_log);
     free(program_log);
 
 	/* create command queues */
@@ -287,7 +285,8 @@ int main(int argc, char** argv) {
 
    	printf("Time to execute: %f\n", (end.tv_sec + end.tv_usec/1000000.0) - 
    		(start.tv_sec + start.tv_usec/1000000.0));
-	printf("Printing host representation of a:\n");
+
+/*	printf("Printing host representation of a:\n");
    	for(int i = 0; i < MATRIX_SIZE; i++) {
    		for(int j = 0; j < MATRIX_SIZE; j++)
    			printf("%f   ", a[i*MATRIX_SIZE+j]);
@@ -310,9 +309,7 @@ int main(int argc, char** argv) {
    		printf("\n");
    	}
    	printf("\n");
-
-   	printf("*** KERNEL WORKS, USING BUFFERS TO PASS VALUES BACK TO HOST DOES NOT! ***\n\n");
-
+*/
    	/* Deallocate resources */
    clReleaseKernel(kernel);
    clReleaseMemObject(a_buffer);

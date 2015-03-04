@@ -8,6 +8,7 @@
  function dotGridGradient(int ix, int iy, float x, float y) {
  
      // Precomputed (or otherwise) gradient vectors at each grid point X,Y
+     // This is the random part!
      extern float Gradient[Y][X][2];
  
      // Compute the distance vector
@@ -45,3 +46,25 @@
      return value;
  }
  */
+
+ __kernel void perlin(__global float* grid,
+                      __global float* gradient_hash,
+                      ) {
+
+     int gid_0 = get_global_id(0);
+     int gid_1 = get_global_id(1);
+
+     int lid_0 = get_local_id(0);
+     int lid_1 = get_local_id(1);
+
+     float sx = x - 
+
+
+
+
+ }
+
+
+
+
+

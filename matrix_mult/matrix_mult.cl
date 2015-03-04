@@ -27,7 +27,8 @@ __kernel void matrix_mult(__global float* a,
 	int gid_1 = get_group_id(1);
 
 	int lid = get_local_id(0);
-	//printf("(%d, %d) -- lid = %d\n", gid_0, gid_1, lid);
+	
+	// Do I need to minimize host memory reads?
 	local_result_vector[lid] = a[gid_0*matrix_dimen + lid]*b[lid*matrix_dimen + gid_1];
 	
 	barrier(CLK_LOCAL_MEM_FENCE);

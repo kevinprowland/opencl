@@ -161,12 +161,12 @@ int main(int argc, char** argv) {
 	cl_mem a_buffer, b_buffer, c_buffer;
 
 	/* initialize data */
-	float a[MATRIX_SIZE];
+	float a[MATRIX_SIZE*MATRIX_SIZE];
 	make_matrix(a, MATRIX_SIZE);
-	float b[MATRIX_SIZE];
+	float b[MATRIX_SIZE*MATRIX_SIZE];
 	make_matrix(b, MATRIX_SIZE);
 	float c[MATRIX_SIZE*MATRIX_SIZE];
-	memset(c, 0, MATRIX_SIZE);
+	memset(c, 0, MATRIX_SIZE*MATRIX_SIZE);
 
 	/* and result buffer */
 	float* result = (float*)malloc(MATRIX_SIZE*MATRIX_SIZE*sizeof(float));
@@ -233,7 +233,7 @@ int main(int argc, char** argv) {
       	exit(1);   
    	}
 
-   	c_buffer = clCreateBuffer(context, CL_MEM_READ_WRITE |
+   	c_buffer = clCreateBuffer(context, CL_MEM_WRITE_ONLY |
         CL_MEM_COPY_HOST_PTR, MATRIX_SIZE * MATRIX_SIZE * sizeof(float), c, &err);
    	if(err < 0) {
     	perror("Couldn't create c buffer");
@@ -265,6 +265,7 @@ int main(int argc, char** argv) {
    	struct timeval start, end;
 
    	gettimeofday(&start, 0);
+   	for(int i = 0; i < 1; i++) {
    	err = clEnqueueNDRangeKernel(gpu_queue, kernel, 2, NULL, global_size, 
         local_size, 0, NULL, NULL);
 
@@ -281,6 +282,7 @@ int main(int argc, char** argv) {
       	perror("Couldn't read the buffer");
       	exit(1);
    	}
+    }
    	gettimeofday(&end, 0);
 
    	printf("Time to execute: %f\n", (end.tv_sec + end.tv_usec/1000000.0) - 
@@ -301,23 +303,56 @@ int main(int argc, char** argv) {
    		printf("\n");
    	}
    	printf("\n");
-
-	printf("Printing host representation of c:\n");
-   	for(int i = 0; i < MATRIX_SIZE; i++) {
-   		for(int j = 0; j < MATRIX_SIZE; j++)
-   			printf("%f   ", result[i*MATRIX_SIZE+j]);
-   		printf("\n");
-   	}
-   	printf("\n");
 */
+	// printf("Printing host representation of c:\n");
+ //   	for(int i = 0; i < MATRIX_SIZE; i++) {
+ //   		for(int j = 0; j < MATRIX_SIZE; j++)
+ //   			printf("%f   ", result[i*MATRIX_SIZE+j]);
+ //   		printf("\n");
+ //   	}
+ //   	printf("\n");
+
    	/* Deallocate resources */
-   clReleaseKernel(kernel);
-   clReleaseMemObject(a_buffer);
-   clReleaseMemObject(b_buffer);
-   clReleaseMemObject(c_buffer);
-   clReleaseCommandQueue(cpu_queue);
-   clReleaseCommandQueue(gpu_queue);
-   clReleaseProgram(program);
-   clReleaseContext(context);
+   	clReleaseKernel(kernel);
+   	clReleaseMemObject(a_buffer);
+   	clReleaseMemObject(b_buffer);
+   	clReleaseMemObject(c_buffer);
+   	clReleaseCommandQueue(cpu_queue);
+   	clReleaseCommandQueue(gpu_queue);
+   	clReleaseProgram(program);
+   	clReleaseContext(context);
+
+   	float c_serial[MATRIX_SIZE*MATRIX_SIZE];
+   	memset(c, 0, MATRIX_SIZE*MATRIX_SIZE);
+   	float sum;
+
+    struct timeval start_serial, end_serial;
+    gettimeofday(&start_serial, 0);
+    for(int n = 0; n < 1; n++){
+	for (int i = 0; i < MATRIX_SIZE; i++ ) {
+      for (int j = 0; j < MATRIX_SIZE ; j++ ) {
+        for (int k = 0; k < MATRIX_SIZE; k++ )
+        {
+          sum = sum + a[i*MATRIX_SIZE+k]*b[k*MATRIX_SIZE+j];
+        }
+ 
+        c_serial[i*MATRIX_SIZE+j] = sum;
+        sum = 0;
+      }
+    }
+	}
+    gettimeofday(&end_serial, 0);
+    printf("Time to execute: %f\n", (end_serial.tv_sec + end_serial.tv_usec/1000000.0) - 
+   		(start_serial.tv_sec + start_serial.tv_usec/1000000.0));
+
+    // printf("Printing host representation of c_serial:\n");
+   	// for(int i = 0; i < MATRIX_SIZE; i++) {
+   	// 	for(int j = 0; j < MATRIX_SIZE; j++)
+   	// 		printf("%f   ", c_serial[i*MATRIX_SIZE+j]);
+   	// 	printf("\n");
+   	// }
+   	// printf("\n");
+
+
    return 0;
 }

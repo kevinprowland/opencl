@@ -23,28 +23,16 @@ __kernel void matrix_mult(__global float* a,
 			   			  __global float* c) {
 
 	int matrix_dimen = get_num_groups(0);
-	int matrix_dimen_1 = get_num_groups(1);
-
-
-
 	int gid_0 = get_group_id(0);
 	int gid_1 = get_group_id(1);
 
 	int lid = get_local_id(0);
-	//lid_1? No! Work items are 1 dimensional
-
-	//global_id(0) is just gid(0)*lid 
-	//global_id(1) likewise
-
-	if(matrix_dimen_1 == 1) { //cpu
-		local_result_vector[lid] = a[gid_0]; //TODO 1D range kernel math
-	}
-
+	//printf("(%d, %d) -- lid = %d\n", gid_0, gid_1, lid);
 	local_result_vector[lid] = a[gid_0*matrix_dimen + lid]*b[lid*matrix_dimen + gid_1];
 	
 	barrier(CLK_LOCAL_MEM_FENCE);
 	
-	if(lid == 0) {					//if master thread
+	if(lid == 0) {					//if local master thread
 		(*local_result) = 0.0f;
 		for(int i = 0; i < matrix_dimen; i++) {
 			(*local_result) += local_result_vector[i];
@@ -53,6 +41,8 @@ __kernel void matrix_mult(__global float* a,
 	c[gid_0*matrix_dimen+gid_1] = (*local_result);
 
 	barrier(CLK_GLOBAL_MEM_FENCE);
+
+	/* WHY IS IT RUNNING 512*512 THREADS ANYWAY??? */
 }
 
 /*
